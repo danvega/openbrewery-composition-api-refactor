@@ -1,28 +1,85 @@
 <template>
-  <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
-  </div>
+  <table>
+    <thead>
+      <tr>
+        <th @click="sortBreweries('name')">Name</th>
+        <th @click="sortBreweries('city')">City</th>
+        <th @click="sortBreweries('state')">State</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="b in breweries" :key="b.id">
+        <td>{{ b.name }}</td>
+        <td>{{ b.city }}</td>
+        <td>{{ b.state }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    <button @click="prevPage" :disabled="cantGoBack">Previous</button>
+    <button @click="nextPage">Next</button>
+  </p>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import { computed, reactive, ref, watch } from "vue";
 
 export default {
-  name: 'app',
-  components: {
-    HelloWorld
+  setup() {
+    const breweries = ref([]);
+    const page = reactive({ current: 1, size: 20 });
+    const sort = reactive({ key: "name", dir: "asc" });
+    const cantGoBack = computed(() => page.current == 1);
+    const sortStr = computed(() =>
+      sort.dir === "asc" ? sort.key : "-" + sort.key
+    );
+
+    watch(async () => {
+      const response = await fetch(
+        `https://api.openbrewerydb.org/breweries?page=${page.current}&per_page=${page.size}&sort=${sortStr.value}`
+      );
+      breweries.value = await response.json();
+    });
+
+    function sortBreweries(s) {
+      //if s == current sort, reverse
+      if (s === sort.key) {
+        sort.dir = sort.dir === "asc" ? "desc" : "asc";
+      } else {
+        sort.dir = "asc";
+      }
+      sort.key = s;
+    }
+
+    function nextPage() {
+      page.current++;
+    }
+
+    function prevPage() {
+      if (page.current > 1) {
+        page.current--;
+      }
+    }
+
+    return { breweries, sortBreweries, prevPage, nextPage, cantGoBack };
   }
-}
+};
 </script>
 
 <style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+table {
+  padding: 0;
+  margin: 0;
+  border-collapse: collapse;
+}
+th {
+  cursor: pointer;
+}
+td {
+  padding: 4px;
+  margin: 0px;
+}
+tr:nth-child(even) {
+  background-color: rgb(238, 238, 238);
 }
 </style>
